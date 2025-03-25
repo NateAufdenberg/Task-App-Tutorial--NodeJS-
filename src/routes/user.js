@@ -28,27 +28,35 @@ route.post('/users/login', async (req, res) => {
     }
 })
 
-route.get('/users/me', auth, async (req, res) => {
-    res.send(req.user)
-})
-
-route.get('/users/:id', async(req,res) => {
-    const _id = req.params.id;
-
+route.post('/users/logout', auth, async (req, res) => {
     try {
-        const user = await User.findById(_id)
+        req.user.tokens = req.user.tokens.filter((token) => {
+            return token.token !== req.token
+        })
+        await req.user.save()
 
-        if (!user) {
-            return res.status(404).send()
-        }
-
-        res.send(user)
+        res.send()
     } catch (err) {
         res.status(500).send()
     }
 })
 
-route.patch('/users/:id', async(req, res) => {
+route.post('/users/logoutall', auth, async (req, res) => {
+    try {
+        req.user.tokens = []
+        await req.user.save()
+        res.send()
+    } catch (err) {
+        res.status(500).send()
+        console.log(err)
+    }
+})
+
+route.get('/users/me', auth, async (req, res) => {
+    res.send(req.user)
+})
+
+route.patch('/users/me', auth, async(req, res) => {
     const updates = Object.keys(req.body);
     const allowUpdates = ['name', 'email', 'password', 'age'];
     const isValid = updates.every((update) => {
@@ -59,7 +67,7 @@ route.patch('/users/:id', async(req, res) => {
         return res.status(400).send({ error: 'Invalid updates!'})
     }
     try {
-        const user = await User.findById(req.params.id)
+        const user = await User.findById(req.user._id)
 
         updates.forEach((update) => {
             user[update] = req.body[update]
@@ -75,12 +83,13 @@ route.patch('/users/:id', async(req, res) => {
         res.send(user)
     } catch (err) {
         res.status(400).send(err)
+        console.log(err)
     }
 })
 
-route.delete('/users/:id', async (req, res) => {
+route.delete('/users/me', auth, async (req, res) => {
     try {
-        const user = await User.findByIdAndDelete(req.params.id)
+        const user = await User.findByIdAndDelete(req.user._id)
 
         if (!user) {
             return res.status(404).send()
