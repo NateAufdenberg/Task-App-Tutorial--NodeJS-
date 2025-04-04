@@ -3,6 +3,7 @@ const User = require('../models/user.js')
 const auth = require('../middleware/auth.js')
 const webtoken = require('jsonwebtoken')
 const route = new express.Router();
+const multer = require('multer') 
 
 route.post('/users', async (req, res) => {
     const person = new User(req.body);
@@ -13,7 +14,7 @@ route.post('/users', async (req, res) => {
         res.status(201).send({ person, token })
     } catch (err) {
         res.status(400).send(err)
-        console.log(err)
+        console.log(err) 
     }
 })
 
@@ -50,6 +51,27 @@ route.post('/users/logoutall', auth, async (req, res) => {
         res.status(500).send()
         console.log(err)
     }
+})
+const upload = multer({
+    limits: {
+        fileSize: 1000000,
+        fileFilter(req, file, cb) {
+            if (!file.originalname.match(/\.(png|jpeg|png)$/)) {
+                return cb(new Error('Please upload an image'))
+            }
+
+            cb(undefined, true)
+        }  
+    }
+
+})
+
+route.post('/users/me/avatar', auth, upload.single('avatar'), async (req, res) => {
+    req.user.avatar = req.file.buffer
+    await req.user.save()
+    res.send()
+}, (error, req, res, next) => {
+    res.status(400).send({ error: error.message })
 })
 
 route.get('/users/me', auth, async (req, res) => {
